@@ -3,6 +3,10 @@
 from __future__ import annotations
 GAZE_BASE_DIR = 'data/GazeBase/raw/'
 
+EHTASK_DIR = 'data/EHTaskDataset/'
+
+GAZE_BASE_VR_DIR = 'data/GazeBaseVR/raw/data'
+
 # path to SB-SAT raw data -- published upon acceptance
 SB_SAT_DIR_PATH = 'data/SB-SAT'
 
