@@ -222,6 +222,28 @@ def transform_to_new_seqlen_length(X, new_seq_len, skip_padded=False):
     return X_new
 
 
+def AngularCoord2ScreenCoord(AngularCoord):
+    # transform the angular coords ((0 deg, 0 deg) at screen center) to screen coords which are in the range of
+    # 0-1. (0, 0) at Bottom-left, (1, 1) at Top-right
+
+    # the parameters of our Hmd (HTC Vive).
+    # Vertical FOV.
+    VerticalFov = math.pi*110/180;
+    # Size of a half screen.
+    ScreenWidth = 1080;
+    ScreenHeight = 1200;
+    # the pixel distance between eye and the screen center.
+    ScreenDist = 0.5* ScreenHeight/math.tan(VerticalFov/2);
+
+    ScreenCoord = np.zeros(2)
+
+    # the X coord.
+    ScreenCoord[0] = 0.5 + (ScreenDist * math.tan(math.pi*AngularCoord[0] / 180)) / ScreenWidth;
+    # the Y coord.
+    ScreenCoord[1] = 0.5 + (ScreenDist * math.tan(math.pi*AngularCoord[1] / 180)) / ScreenHeight;
+    return ScreenCoord
+
+
 def ScreenCoord2AngularCoord(ScreenCoord):
     # Inverse transformation of screen coords (0-1) to angular coords (degrees).
 
@@ -250,6 +272,9 @@ def get_ehtask_data_for_user(data_path,
                              max_vel=500,
                              output_length=None,
                              delete_high_velocities=False,
+                             screen_config={'resolution': [1680, 1050],
+                                                   'screen_size': [47.4, 29.7],
+                                                   'distance': 55.5},
                              target_sampling_rate=None):
 
     if output_length is None:
@@ -265,14 +290,21 @@ def get_ehtask_data_for_user(data_path,
         for line in file:
             values = line.split()
             frame_no = int(values[1])
-            x_px = float(values[4])
-            y_px = float(values[5])
-            x_px_vals.append(x_px)
-            y_px_vals.append(y_px)
-            [x_val, y_val] = ScreenCoord2AngularCoord([x_px, y_px])
-            x_vals.append(x_val)
-            y_vals.append(y_val)
             times.append(frame_no)
+
+            #GiW
+            x_vals.append(float(values[6]))
+            y_vals.append(float(values[7]))
+
+            #EiH
+            # x_px = float(values[4])
+            # y_px = float(values[5])
+            # x_px_vals.append(x_px)
+            # y_px_vals.append(y_px)
+            # [x_val, y_val] = ScreenCoord2AngularCoord([x_px, y_px])
+            # x_vals.append(x_val)
+            # y_vals.append(y_val)
+
 
         if target_sampling_rate is not None:
             cur_interpolate_x = interpolate.interp1d(times, x_vals)
@@ -295,9 +327,28 @@ def get_ehtask_data_for_user(data_path,
 
         # transform deg to pix
         if transform_deg_to_px:
-            X_px = X.copy()
-            X_px[:, 0] = np.array(x_px_vals)
-            X_px[:, 1] = np.array(y_px_vals)
+            #GiW
+            X_px = AngularCoord2ScreenCoord(X)
+
+            # X_px = X.copy()
+            # X_px[:, 0] = deg2pix(X_px[:, 0],
+            #                      screen_config['resolution'][0],
+            #                      screen_config['screen_size'][0],
+            #                      screen_config['distance'])
+            # # adjust origin
+            # X_px[:, 0] += screen_config['resolution'][0] / 2
+            #
+            # X_px[:, 1] = deg2pix(X_px[:, 1],
+            #                      screen_config['resolution'][1],
+            #                      screen_config['screen_size'][1],
+            #                      screen_config['distance'])
+            # # adjust origin
+            # X_px[:, 1] += screen_config['resolution'][1] / 2
+
+            # EiH
+            # X_px = X.copy()
+            # X_px[:, 0] = np.array(x_px_vals)
+            # X_px[:, 1] = np.array(y_px_vals)
         else:
             X_px = np.zeros(X.shape)
 
@@ -853,6 +904,7 @@ def load_gazebasevr_data(gaze_base_vr_dir='path_to_gazebase_data',
 def load_gazebase_data(gaze_base_dir='path_to_gazebase_data',
                        use_trial_types=['TEX', 'RAN'],  # ,'BLG','FXS','VD1','VD2','HSS']
                        max_round=9,
+                       number_train=-1,
                        target_sampling_rate=60,
                        sampling_rate=1000
                        ):

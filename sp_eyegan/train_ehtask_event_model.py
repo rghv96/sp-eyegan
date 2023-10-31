@@ -39,11 +39,11 @@ def main():
         flag_train_on_gpu = False
 
     if event_type == 'fixation':
-        data = np.load(data_dir + 'fixation_matrix_ehtask_vd.npy')
-        save_path = model_dir + 'fixation_model_ehtask'
+        data = np.load(data_dir + 'fixation_matrix_ehtask_giw.npy')
+        save_path = model_dir + 'fixation_model_ehtask_giw'
     elif event_type == 'saccade':
-        data = np.load(data_dir + 'saccade_matrix_ehtask_vd.npy')
-        save_path = model_dir + 'saccade_model_ehtask'
+        data = np.load(data_dir + 'saccade_matrix_ehtask_giw.npy')
+        save_path = model_dir + 'saccade_model_ehtask_giw'
 
     if hp_result_path is not None:
         save_path += '_optimized'

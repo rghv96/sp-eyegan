@@ -42,24 +42,10 @@ def main():
     sampling_rate = 100
 
     # params
-    pp_params = (None, 6)
-    minDurFix = 20
-    minDurSac = 6
-    input_velocity = True
-    blink_threshold = 0.6
-    min_blink_duration = 1
-    velocity_threshold = 0.1
     smoothing_window_length = 0.007
-    verbose = 0
     disable = False
-    dispersion_threshold = 1.6
-    min_degree_visual_angle = 5
-    min_saccade_length = 30
-    max_saccade_length = 90
-    min_fixation_length = 30
+    min_fixation_length = 100
     max_fixation_dispersion = 2.7
-    min_saccade_velocity = 10
-
     max_vel = 500
 
     parser = argparse.ArgumentParser()
@@ -244,8 +230,11 @@ def main():
         cur_sac_len = np.min([max_sac_len, filtered_saccade_list[i].shape[0]])
         saccade_matrix[i, 0:cur_sac_len, :] = filtered_saccade_list[i][0:cur_sac_len, :]
 
-    np.save('data/fixation_matrix_ehtask_vd', fixation_matrix)
-    np.save('data/saccade_matrix_ehtask_vd', saccade_matrix)
+    print('fixation_matrix.shape: ', fixation_matrix.shape)
+    print('saccade_matrix.shape: ', saccade_matrix.shape)
+
+    np.save('data/fixation_matrix_ehtask_giw100', fixation_matrix)
+    np.save('data/saccade_matrix_ehtask_giw100', saccade_matrix)
 
 
 if __name__ == '__main__':

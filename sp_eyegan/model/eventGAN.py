@@ -498,18 +498,18 @@ class dataGenerator():
                         num_samples,
                         output_size,
                         ):
-        output_data = np.zeros([num_samples,output_size,self.channels])
+        output_data = np.zeros([num_samples,output_size,self.channels])  # (100000, 5000, 32)
 
         # sample fixation and saccade data
-        fix_noise = tf.random.normal([self.model_config_fixation['batch_size'], self.random_size])
-        cur_fix_data = self.fix_model.generator(fix_noise)
+        fix_noise = tf.random.normal([self.model_config_fixation['batch_size'], self.random_size])  # (256, 32)
+        cur_fix_data = self.fix_model.generator(fix_noise)  # (256, 100, 2)
         cur_fix_counter = 0
 
         sac_noise = tf.random.normal([self.model_config_saccade['batch_size'], self.random_size])
         cur_sac_data = self.sac_model.generator(sac_noise)
         cur_sac_counter = 0
 
-        for i in tqdm(np.arange(num_samples)):
+        for i in tqdm(np.arange(num_samples)):  # 100000
             counter = 0
             while True:
                 # sample fixation duration
@@ -530,8 +530,8 @@ class dataGenerator():
                     fix_noise = tf.random.normal([self.model_config_fixation['batch_size'], self.random_size])
                     cur_fix_data = self.fix_model.generator(fix_noise)
                     cur_fix_counter = 0
-                fix_data = cur_fix_data[cur_fix_counter:cur_fix_counter + num_fix_samples]
-                fix_data = np.reshape(fix_data,[fix_data.shape[0]*fix_data.shape[1],fix_data.shape[2]])
+                fix_data = cur_fix_data[cur_fix_counter:cur_fix_counter + num_fix_samples]  # (n, 100, 2)
+                fix_data = np.reshape(fix_data,[fix_data.shape[0]*fix_data.shape[1],fix_data.shape[2]])  # (100n, 2)
                 cur_fix_counter += num_fix_samples
 
 
