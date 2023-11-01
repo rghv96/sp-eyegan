@@ -114,7 +114,7 @@ def get_i_dt(x_coordinates,y_coordinates,
             max_fixation_dispersion = None,
             ):
 
-    duration_threshold = int(np.floor((min_duration / 1000.) * sampling))
+    duration_threshold = int(np.floor((min_duration / float(sampling)) * sampling))
     min_duration_threshold_fixation = np.max([1,int(np.floor((min_event_duration_fixation / 1000.) * sampling))])
     min_duration_threshold_saccade = np.max([1,int(np.floor((min_event_duration_saccade / 1000.) * sampling))])
     if max_fixation_dispersion is None:

@@ -44,16 +44,24 @@ def main():
     # params
     smoothing_window_length = 0.007
     disable = False
-    min_fixation_length = 100
+    min_fixation_length = 10
     max_fixation_dispersion = 2.7
     max_vel = 500
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-target_sampling_rate', '--target_sampling_rate', type=int, default=100)
     parser.add_argument('-sac_window_size', '--sac_window_size', type=int, default=30)
-    parser.add_argument('-fix_window_size', '--fix_window_size', type=int, default=100)
+    parser.add_argument('-fix_window_size', '--fix_window_size', type=int, default=10)
+    parser.add_argument('-stimulus', '--stimulus', type=str, default='all')  # all | 1 | 2 | 3 | 4
 
     args = parser.parse_args()
+    task_ids = []
+    stimulus = args.stimulus
+    if stimulus == 'all':
+        task_ids = [1, 2, 3, 4]
+    else:
+        task_ids.append(int(stimulus))
+
     target_sampling_rate = args.target_sampling_rate
     sac_window_size = args.sac_window_size
     fix_window_size = args.fix_window_size
@@ -62,6 +70,7 @@ def main():
         ehtask_dir=config.EHTASK_DIR,
         target_sampling_rate=target_sampling_rate,
         sampling_rate=sampling_rate,
+        task_ids=task_ids
     )
 
     event_df_list = []
@@ -233,8 +242,8 @@ def main():
     print('fixation_matrix.shape: ', fixation_matrix.shape)
     print('saccade_matrix.shape: ', saccade_matrix.shape)
 
-    np.save('data/fixation_matrix_ehtask_giw100', fixation_matrix)
-    np.save('data/saccade_matrix_ehtask_giw100', saccade_matrix)
+    np.save('data/fixation_matrix_ehtask_giw_task_' + stimulus, fixation_matrix)
+    np.save('data/saccade_matrix_ehtask_giw_task_' + stimulus, saccade_matrix)
 
 
 if __name__ == '__main__':

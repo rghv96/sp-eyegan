@@ -633,7 +633,10 @@ def get_gazebasevr_data_for_user(
 
 def load_ehtask_data(ehtask_dir='path_to_ehtask_data',
                      target_sampling_rate=60,
-                     sampling_rate=100):
+                     sampling_rate=100,
+                     task_ids=None):
+    if task_ids is None:
+        task_ids = [1, 2, 3, 4]
     ehtask_raw_data_dir = ehtask_dir + 'RawData/'
     txt_files = get_txt_files(ehtask_raw_data_dir)
 
@@ -647,6 +650,8 @@ def load_ehtask_data(ehtask_dir='path_to_ehtask_data',
         curr_user = int(file_name_split[1])
         curr_video = int(file_name_split[3])
         curr_task = int(file_name_split[5])
+        if curr_task not in task_ids:
+            continue
 
         user_list.append(curr_user)
         video_list.append(curr_video)
