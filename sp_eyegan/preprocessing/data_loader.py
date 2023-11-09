@@ -286,11 +286,15 @@ def get_ehtask_data_for_user(data_path,
         x_px_vals = []
         y_px_vals = []
         times = []
+        frames = []
+        i = 0
 
         for line in file:
             values = line.split()
             frame_no = int(values[1])
             times.append(frame_no)
+            frames.append(int(i))
+            i = i + 1
 
             #GiW
             x_vals.append(float(values[6]))
@@ -392,7 +396,7 @@ def get_ehtask_data_for_user(data_path,
             'X_vel': X_vel,
             'X_vel_transformed': X_vel_transformed,
             'path': data_path,
-
+            'frames': frames
         }
         return user_dict
 
@@ -634,9 +638,12 @@ def get_gazebasevr_data_for_user(
 def load_ehtask_data(ehtask_dir='path_to_ehtask_data',
                      target_sampling_rate=60,
                      sampling_rate=100,
-                     task_ids=None):
+                     task_ids=None,
+                     video_ids=None):
     if task_ids is None:
         task_ids = [1, 2, 3, 4]
+    if video_ids is None:
+        video_ids = [i+1 for i in range(15)]
     ehtask_raw_data_dir = ehtask_dir + 'RawData/'
     txt_files = get_txt_files(ehtask_raw_data_dir)
 
@@ -650,6 +657,8 @@ def load_ehtask_data(ehtask_dir='path_to_ehtask_data',
         curr_user = int(file_name_split[1])
         curr_video = int(file_name_split[3])
         curr_task = int(file_name_split[5])
+        if curr_video not in video_ids:
+            continue
         if curr_task not in task_ids:
             continue
 

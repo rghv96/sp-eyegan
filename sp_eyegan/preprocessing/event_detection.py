@@ -10,7 +10,7 @@ import pandas as pd
 # get list of saccade-ids and fixation-ids with dispersion algorithm
 def get_sacc_fix_lists_dispersion(x_deg, y_deg,
                         corrupt = None,
-                        sampling_rate = 1000,
+                        sampling_rate = 100,
                         min_duration = 80,
                         velocity_threshold = 20,
                         min_event_duration_fixation = 50,
@@ -30,7 +30,7 @@ def get_sacc_fix_lists_dispersion(x_deg, y_deg,
                         min_event_duration_saccade = min_event_duration_saccade,
                         flag_skipNaNs = flag_skipNaNs,
                         verbose=0,
-                        max_fixation_dispersion = None,
+                        max_fixation_dispersion = max_fixation_dispersion,
                                      )
 
     #  fix=1, saccade=2, corrupt=3
@@ -118,7 +118,7 @@ def get_i_dt(x_coordinates,y_coordinates,
     min_duration_threshold_fixation = np.max([1,int(np.floor((min_event_duration_fixation / 1000.) * sampling))])
     min_duration_threshold_saccade = np.max([1,int(np.floor((min_event_duration_saccade / 1000.) * sampling))])
     if max_fixation_dispersion is None:
-        dispersion_threshold = (velocity_threshold / 1000. * min_duration)
+        dispersion_threshold = (velocity_threshold / float(sampling) * min_duration)
     else:
         dispersion_threshold = max_fixation_dispersion
 

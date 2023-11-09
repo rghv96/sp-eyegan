@@ -1,18 +1,9 @@
 from __future__ import annotations
 
 import argparse
-import math
-import os
-import random
-import socket
-import sys
 
 import joblib
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
-from sklearn import metrics
 from tqdm import tqdm
 
 import config as config
@@ -50,17 +41,25 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-target_sampling_rate', '--target_sampling_rate', type=int, default=100)
-    parser.add_argument('-sac_window_size', '--sac_window_size', type=int, default=30)
+    parser.add_argument('-sac_window_size', '--sac_window_size', type=int, default=10)
     parser.add_argument('-fix_window_size', '--fix_window_size', type=int, default=10)
-    parser.add_argument('-stimulus', '--stimulus', type=str, default='all')  # all | 1 | 2 | 3 | 4
+    parser.add_argument('-task', '--task', type=str, default='all')  # all | 1 | 2 | 3 | 4
+    parser.add_argument('-video', '--video', type=str, default='all')  # all | 1 | 2 | 3 | 4 ...
 
     args = parser.parse_args()
     task_ids = []
-    stimulus = args.stimulus
-    if stimulus == 'all':
+    task = args.task
+    if task == 'all':
         task_ids = [1, 2, 3, 4]
     else:
-        task_ids.append(int(stimulus))
+        task_ids.append(int(task))
+
+    video_no = args.video
+    video_ids = []
+    if video_no == 'all':
+        video_ids = [i+1 for i in range(15)]
+    else:
+        video_ids.append(int(video_no))
 
     target_sampling_rate = args.target_sampling_rate
     sac_window_size = args.sac_window_size
@@ -70,7 +69,8 @@ def main():
         ehtask_dir=config.EHTASK_DIR,
         target_sampling_rate=target_sampling_rate,
         sampling_rate=sampling_rate,
-        task_ids=task_ids
+        task_ids=task_ids,
+        video_ids=video_ids
     )
 
     event_df_list = []
@@ -242,8 +242,8 @@ def main():
     print('fixation_matrix.shape: ', fixation_matrix.shape)
     print('saccade_matrix.shape: ', saccade_matrix.shape)
 
-    np.save('data/fixation_matrix_ehtask_giw_task_' + stimulus, fixation_matrix)
-    np.save('data/saccade_matrix_ehtask_giw_task_' + stimulus, saccade_matrix)
+    np.save('data/fixation_matrix_ehtask_giw_video_' + video_no + '_task_' + task, fixation_matrix)
+    np.save('data/saccade_matrix_ehtask_giw_video_' + video_no + '_task_' + task, saccade_matrix)
 
 
 if __name__ == '__main__':

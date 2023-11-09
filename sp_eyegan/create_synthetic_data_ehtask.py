@@ -2,18 +2,8 @@ from __future__ import annotations
 
 import argparse
 import os
-import random
-import socket
-import sys
-
-import joblib
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import tensorflow
-import tensorflow as tf
-from sklearn import metrics
-from tqdm.notebook import tqdm
 
 from sp_eyegan.model import eventGAN as eventGAN
 from sp_eyegan.model import stat_scanpath_model as stat_scanpath_model
@@ -21,16 +11,18 @@ from sp_eyegan.model import stat_scanpath_model as stat_scanpath_model
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--window_size', type=int, required=True)
+    parser.add_argument('-window_size', '--window_size', type=int, required=True)
     parser.add_argument('--GPU', type=int, default=0)
-    parser.add_argument('--num_samples', type=int, default=100000)
+    parser.add_argument('--num_samples', type=int, default=1000)
     parser.add_argument('--flag_train_on_gpu', type=int, default=1)
     parser.add_argument('--data_dir', type=str, default='data/')
-    parser.add_argument('--sac_window_size', type=int, default=30)
+    parser.add_argument('--sac_window_size', type=int, default=10)
     parser.add_argument('--fix_window_size', type=int, default=10)
+    parser.add_argument('-task', '--task', type=str, default='all')  # all | 1 | 2 | 3 | 4
+    parser.add_argument('-video', '--video', type=str, default='all')  # all | 1 | 2 | 3 | 4 ...
     parser.add_argument(
         '--scanpath_model', type=str,
-        choices=['random', 'stat_model'], default='random'
+        choices=['random', 'average'], default='average'
     )
     parser.add_argument('--fix_hp_path', type=str, default=None)
     parser.add_argument('--sac_hp_path', type=str, default=None)
@@ -45,6 +37,20 @@ def main():
     scanpath_model = args.scanpath_model
     fix_hp_path = args.fix_hp_path
     sac_hp_path = args.sac_hp_path
+
+    task_ids = []
+    task = args.task
+    if task == 'all':
+        task_ids = [1, 2, 3, 4]
+    else:
+        task_ids.append(int(task))
+
+    video_no = args.video
+    video_ids = []
+    if video_no == 'all':
+        video_ids = [i + 1 for i in range(15)]
+    else:
+        video_ids.append(int(video_no))
 
     # params for stimulus
     expt_txt = {'px_x': 1680,
@@ -79,8 +85,8 @@ def main():
     mean_fix_len = 25
     std_fix_len = 15
 
-    fixation_path = 'event_model/fixation_model_ehtask_giw'
-    saccade_path = 'event_model/saccade_model_ehtask_giw'
+    fixation_path = 'event_model/fixation_model_ehtask_giw_video_' + video_no + '_task_' + task
+    saccade_path = 'event_model/saccade_model_ehtask_giw_video_' + video_no + '_task_' + task
 
     data_suffix = ''
 
@@ -215,6 +221,26 @@ def main():
             num_samples=num_samples,
             output_size=output_window_size,
         )
+    elif scanpath_model == 'average':
+        # scanpath_file = '../data/scanpath/scanpath_ehtask_video_' + video_no + '_task_' + task + '.npy'
+        scanpath_file = data_dir +'scanpath/scanpath_ehtask_video_' + video_no + '_task_' + task + '.npy'
+        scanpath = np.load(scanpath_file)
+        frame_no = scanpath[:, 0]
+        x_dva = scanpath[:, 1]
+        y_dva = scanpath[:, 2]
+
+        x_locations, y_locations = data_generator.sample_scanpath(
+            x_fix_locations=x_dva,
+            y_fix_locations=y_dva,
+            num_sample_saccs=1000,
+            dva_threshold=0.01,
+            fixation_durations=None,
+            saccade_durations=None,
+        )
+
+        print('x_locations.shape: ', x_locations.shape)
+        print('y_locations.shape: ', y_locations.shape)
+
     elif scanpath_model == 'stat_model':
         stat_model = stat_scanpath_model.satisticalScanPath()
         # collect texts
@@ -258,15 +284,15 @@ def main():
         syt_data = data_dict['vel_data']
 
     print('save data')
-    if window_size != 5000:
-        data_save_path = data_dir + 'synthetic_ehtask_data_' + str(scanpath_model) + '_' + str(
-            output_window_size) + data_suffix
-        np.save(data_save_path, syt_data)
-    else:
-        data_save_path = data_dir + 'synthetic_ehtask_data_'+ str(scanpath_model) + data_suffix
-        np.save(data_save_path, syt_data)
+    # if window_size != 5000:
+    #     data_save_path = data_dir + 'synthetic_ehtask_data_' + str(scanpath_model) + '_' + str(
+    #         output_window_size) + data_suffix
+    #     np.save(data_save_path, syt_data)
+    # else:
+    #     data_save_path = data_dir + 'synthetic_ehtask_data_'+ str(scanpath_model) + data_suffix
+    #     np.save(data_save_path, syt_data)
 
-    print('data saved to: ' + str(data_save_path))
+    # print('data saved to: ' + str(data_save_path))
 
 
 if __name__ == '__main__':

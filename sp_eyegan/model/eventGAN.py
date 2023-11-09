@@ -401,6 +401,10 @@ class dataGenerator():
         # set start to first fix location
         x_location = [x_fix_locations[0]]
         y_location = [y_fix_locations[0]]
+        fixation_x_loc = []
+        fixation_y_loc = []
+        saccade_x_loc = []
+        saccade_y_loc = []
         for i in tqdm(np.arange(len(x_fix_locations)-1),disable = True):
             x_target_location = x_fix_locations[i+1]
             y_target_location = y_fix_locations[i+1]
@@ -426,6 +430,9 @@ class dataGenerator():
             x_location += list(fix_dva[:,0] + x_location[-1])
             y_location += list(fix_dva[:,1] + y_location[-1])
 
+            fixation_x_loc += [list(fix_dva[:,0] + x_location[-1])]
+            fixation_y_loc += [list(fix_dva[:, 1] + y_location[-1])]
+
             # add saccade
             if saccade_durations is not None:
                 fixed_duration = saccade_durations[i]
@@ -445,7 +452,11 @@ class dataGenerator():
                                           )
             x_location += list(x_locs_sac)
             y_location += list(y_locs_sac)
+            saccade_x_loc += [list(x_locs_sac)]
+            saccade_y_loc += [list(y_locs_sac)]
             continue
+
+            print('reached here')
 
             cur_x_distance = x_target_location - x_location[-1]
             cur_y_distance = y_target_location - y_location[-1]
@@ -490,7 +501,7 @@ class dataGenerator():
                 counter += 1
                 if counter > max_iter:
                     break
-        return x_location, y_location
+        return x_location, y_location, fixation_x_loc, fixation_y_loc, saccade_x_loc, saccade_y_loc
 
 
 
@@ -567,3 +578,65 @@ class dataGenerator():
                     break
                 continue
         return output_data
+
+    def sample_scanpath_ehtask(self,
+                       stat_model,
+                       text_lists,
+                       expt_txts,
+                       num_sample_saccs=1000,
+                       dva_threshold=0.1,
+                       max_iter=10,
+                       num_scanpaths_per_text=10,
+                       num_samples=100,
+                       output_size=5000,
+                       store_dva_data=False,
+                       ):
+        def dva_to_vel(vector):
+            vel = np.array(vector[1:]) - np.array(vector[0:-1])
+            vel = np.array([0] + list(vel))
+            return vel
+
+        output_data = np.zeros([num_samples, output_size, self.channels])
+        if store_dva_data:
+            output_data_dva = np.zeros([num_samples, output_size, self.channels])
+        else:
+            output_data_dva = None
+        max_number = int(np.ceil(num_samples / (len(text_lists) * num_scanpaths_per_text)))
+        num_added = 0
+        for ii in tqdm(np.arange(max_number)):
+            if num_added >= num_samples:
+                break
+            for d_i in range(len(text_lists)):
+                text_list = text_lists[d_i]
+                expt_txt = expt_txts[d_i]
+                x_locations, y_locations, x_dva, y_dva, fix_durations = stat_model.sample_postions_for_text(text_list,
+                                                                                                            expt_txt)
+                saccade_durations = None
+                x_locs, y_locs = self.sample_scanpath(
+                    x_fix_locations=x_dva,
+                    y_fix_locations=y_dva,
+                    num_sample_saccs=num_sample_saccs,
+                    dva_threshold=dva_threshold,
+                    fixation_durations=fix_durations,
+                    saccade_durations=saccade_durations,
+                )
+
+                x_vels, y_vels = dva_to_vel(x_locs), dva_to_vel(y_locs)
+                min_id = 0
+                max_id = len(x_vels) - (output_size + 1)
+                sample_start_ids = np.array(np.random.choice(np.arange(min_id, max_id, 1), num_scanpaths_per_text),
+                                            dtype=np.int32)
+                for start_id in sample_start_ids:
+                    output_data[num_added, :, 0] = x_vels[start_id:start_id + output_size]
+                    output_data[num_added, :, 1] = y_vels[start_id:start_id + output_size]
+                    if store_dva_data:
+                        output_data_dva[num_added, :, 0] = x_locs[start_id:start_id + output_size]
+                        output_data_dva[num_added, :, 1] = y_locs[start_id:start_id + output_size]
+                    num_added += 1
+                    if num_added >= num_samples:
+                        break
+                if num_added >= num_samples:
+                    break
+        return {'vel_data': output_data,
+                'dva_data': output_data_dva,
+                }
