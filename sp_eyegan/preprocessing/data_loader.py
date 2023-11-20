@@ -639,7 +639,8 @@ def load_ehtask_data(ehtask_dir='path_to_ehtask_data',
                      target_sampling_rate=60,
                      sampling_rate=100,
                      task_ids=None,
-                     video_ids=None):
+                     video_ids=None,
+                     user_id=None):
     if task_ids is None:
         task_ids = [1, 2, 3, 4]
     if video_ids is None:
@@ -661,6 +662,9 @@ def load_ehtask_data(ehtask_dir='path_to_ehtask_data',
             continue
         if curr_task not in task_ids:
             continue
+        if user_id is not None:
+            if user_id != curr_user:
+                continue
 
         user_list.append(curr_user)
         video_list.append(curr_video)

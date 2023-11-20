@@ -8,10 +8,52 @@ import pandas as pd
 from sp_eyegan.model import eventGAN as eventGAN
 from sp_eyegan.model import stat_scanpath_model as stat_scanpath_model
 
+def get_user_ids(video_no, task):
+    user_ids = []
+    txt_files = []
+    start_dir = 'data/EHTaskDataset/RawData/'
+    list_dir = os.listdir(start_dir)
+    for i in range(len(list_dir)):
+        cur_dir = start_dir + list_dir[i]
+        if list_dir[i].startswith('User'):
+            txt_files.append(cur_dir)
+    for txt_file in txt_files:
+        file_name = txt_file.split('/')[-1]
+        file_name_split = file_name.replace('.txt', '').split('_')
+        curr_user = int(file_name_split[1])
+        curr_video = int(file_name_split[3])
+        curr_task = int(file_name_split[5])
+        if curr_video == int(video_no) and curr_task == int(task):
+            user_ids.append(curr_user)
+
+    return user_ids
+
+
+
+
+def replace_giw(input_file, output_file, x_locations, y_locations):
+    # Read the input file
+    with open(input_file, 'r') as file:
+        lines = file.readlines()
+
+    # Replace the specified column with values from the replacement list
+    for i in range(len(lines)):
+        if i >= len(x_locations):
+            print('Exiting early')
+            break
+
+        columns = lines[i].split()
+        columns[6] = str(x_locations[i])
+        columns[7] = str(y_locations[i])
+        lines[i] = ' '.join(columns) + '\n'
+
+    # Write the modified content to the output file
+    with open(output_file, 'w') as file:
+        file.writelines(lines)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-window_size', '--window_size', type=int, required=True)
+    # parser.add_argument('-window_size', '--window_size', type=int, required=True)
     parser.add_argument('--GPU', type=int, default=0)
     parser.add_argument('--num_samples', type=int, default=1000)
     parser.add_argument('--flag_train_on_gpu', type=int, default=1)
@@ -21,22 +63,18 @@ def main():
     parser.add_argument('-task', '--task', type=str, default='all')  # all | 1 | 2 | 3 | 4
     parser.add_argument('-video', '--video', type=str, default='all')  # all | 1 | 2 | 3 | 4 ...
     parser.add_argument(
-        '--scanpath_model', type=str,
-        choices=['random', 'average'], default='average'
+        '-scanpath_model', '--scanpath_model', type=str,
+        choices=['random', 'average'], default='random'
     )
-    parser.add_argument('--fix_hp_path', type=str, default=None)
-    parser.add_argument('--sac_hp_path', type=str, default=None)
 
     args = parser.parse_args()
     GPU = args.GPU
     data_dir = args.data_dir
     num_samples = args.num_samples
-    output_window_size = args.window_size
+    # output_window_size = args.window_size
     sac_window_size = args.sac_window_size
     fix_window_size = args.fix_window_size
     scanpath_model = args.scanpath_model
-    fix_hp_path = args.fix_hp_path
-    sac_hp_path = args.sac_hp_path
 
     task_ids = []
     task = args.task
@@ -90,94 +128,29 @@ def main():
 
     data_suffix = ''
 
-    if fix_hp_path is not None:
-        fixation_path += '_optimized'
-        hp_result_data = pd.read_csv(fix_hp_path)
-        event_accs = list(hp_result_data['event_acc'])
-        model_names = list(hp_result_data['model_name'])
-        best_id = np.argmax(event_accs)
-        best_model_name = model_names[best_id]
+    model_config_fixation = {'gen_kernel_sizes': gen_kernel_sizes_fixation,
+                             'gen_filter_sizes': gen_filter_sizes,
+                             'dis_kernel_sizes': dis_kernel_sizes,
+                             'dis_fiter_sizes': dis_fiter_sizes,
+                             'dis_dropout': dis_dropout,
+                             'window_size': fix_window_size,
+                             'channels': channels,
+                             'batch_size': batch_size,
+                             'random_size': random_size,
+                             'relu_in_last': relu_in_last,
+                             }
 
-        gen_kernel_sizes = [int(a) for a in
-                            np.array(best_model_name.split('_')[0].replace('[', '').replace(']', '').split(','))]
-        gen_filter_sizes = [int(a) for a in
-                            np.array(best_model_name.split('_')[1].replace('[', '').replace(']', '').split(','))]
-
-        dis_kernel_sizes = [int(a) for a in
-                            np.array(best_model_name.split('_')[2].replace('[', '').replace(']', '').split(','))]
-        dis_fiter_sizes = [int(a) for a in
-                           np.array(best_model_name.split('_')[3].replace('[', '').replace(']', '').split(','))]
-
-        dis_dropout = float(best_model_name.split('_')[4])
-
-        model_config_fixation = {'gen_kernel_sizes': gen_kernel_sizes,
-                                 'gen_filter_sizes': gen_filter_sizes,
-                                 'dis_kernel_sizes': dis_kernel_sizes,
-                                 'dis_fiter_sizes': dis_fiter_sizes,
-                                 'dis_dropout': dis_dropout,
-                                 'window_size': fix_window_size,
-                                 'channels': channels,
-                                 'batch_size': batch_size,
-                                 'random_size': random_size,
-                                 'relu_in_last': relu_in_last,
-                                 }
-        data_suffix = '_optimized'
-    else:
-        model_config_fixation = {'gen_kernel_sizes': gen_kernel_sizes_fixation,
-                                 'gen_filter_sizes': gen_filter_sizes,
-                                 'dis_kernel_sizes': dis_kernel_sizes,
-                                 'dis_fiter_sizes': dis_fiter_sizes,
-                                 'dis_dropout': dis_dropout,
-                                 'window_size': fix_window_size,
-                                 'channels': channels,
-                                 'batch_size': batch_size,
-                                 'random_size': random_size,
-                                 'relu_in_last': relu_in_last,
-                                 }
-    if sac_hp_path is not None:
-        saccade_path += '_optimized'
-        hp_result_data = pd.read_csv(sac_hp_path)
-        event_accs = list(hp_result_data['event_acc'])
-        model_names = list(hp_result_data['model_name'])
-        best_id = np.argmax(event_accs)
-        best_model_name = model_names[best_id]
-
-        gen_kernel_sizes = [int(a) for a in
-                            np.array(best_model_name.split('_')[0].replace('[', '').replace(']', '').split(','))]
-        gen_filter_sizes = [int(a) for a in
-                            np.array(best_model_name.split('_')[1].replace('[', '').replace(']', '').split(','))]
-
-        dis_kernel_sizes = [int(a) for a in
-                            np.array(best_model_name.split('_')[2].replace('[', '').replace(']', '').split(','))]
-        dis_fiter_sizes = [int(a) for a in
-                           np.array(best_model_name.split('_')[3].replace('[', '').replace(']', '').split(','))]
-
-        dis_dropout = float(best_model_name.split('_')[4])
-
-        model_config_saccade = {'gen_kernel_sizes': gen_kernel_sizes,
-                                'gen_filter_sizes': gen_filter_sizes,
-                                'dis_kernel_sizes': dis_kernel_sizes,
-                                'dis_fiter_sizes': dis_fiter_sizes,
-                                'dis_dropout': dis_dropout,
-                                'window_size': sac_window_size,
-                                'channels': channels,
-                                'batch_size': batch_size,
-                                'random_size': random_size,
-                                'relu_in_last': relu_in_last,
-                                }
-        data_suffix = '_optimized'
-    else:
-        model_config_saccade = {'gen_kernel_sizes': gen_kernel_sizes_saccade,
-                                'gen_filter_sizes': gen_filter_sizes,
-                                'dis_kernel_sizes': dis_kernel_sizes,
-                                'dis_fiter_sizes': dis_fiter_sizes,
-                                'dis_dropout': dis_dropout,
-                                'window_size': sac_window_size,
-                                'channels': channels,
-                                'batch_size': batch_size,
-                                'random_size': random_size,
-                                'relu_in_last': relu_in_last,
-                                }
+    model_config_saccade = {'gen_kernel_sizes': gen_kernel_sizes_saccade,
+                            'gen_filter_sizes': gen_filter_sizes,
+                            'dis_kernel_sizes': dis_kernel_sizes,
+                            'dis_fiter_sizes': dis_fiter_sizes,
+                            'dis_dropout': dis_dropout,
+                            'window_size': sac_window_size,
+                            'channels': channels,
+                            'batch_size': batch_size,
+                            'random_size': random_size,
+                            'relu_in_last': relu_in_last,
+                            }
 
     gan_config = {'window_size': window_size,
                   'random_size': random_size,
@@ -217,83 +190,54 @@ def main():
                                             )
 
     if scanpath_model == 'random':
-        syt_data = data_generator.sample_random_data(
-            num_samples=num_samples,
-            output_size=output_window_size,
-        )
+        user_ids = get_user_ids(video_no, task)
+        print(user_ids)
+        for i in range(len(user_ids)):
+            # print(i)
+            scanpath_file = data_dir + 'scanpath/random/scanpath_ehtask_video_' + video_no + '_task_' + task + '_type_' + scanpath_model + '_' + str(i+1) + '.npy'
+            scanpath = np.load(scanpath_file)
+            x_dva = scanpath[:, 1]
+            y_dva = scanpath[:, 2]
+
+            x_locations, y_locations, fix_x_loc, fix_y_loc, sac_x_loc, sac_y_loc = data_generator.sample_scanpath(
+                x_fix_locations=x_dva,
+                y_fix_locations=y_dva,
+                num_sample_saccs=1000,
+                dva_threshold=0.01,
+                fixation_durations=None,
+                saccade_durations=None,
+            )
+            print('x_locations.len: ', len(x_locations))
+
+            user_id = str(user_ids[i])
+            if len(user_id) == 1:
+                user_id = '0' + user_id
+            if len(video_no) == 1:
+                video_str = '0' + video_no
+            else:
+                video_str = video_no
+
+            input_file = data_dir + 'EHTaskDataset/RawData/User_' + user_id + '_Video_' + video_str + '_Task_' + task + '.txt'
+            print(input_file)
+            output_file = data_dir + 'EHTask_Synthetic/User_' + user_id + '_Video_' + video_str + '_Task_' + task + '.txt'
+            replace_giw(input_file, output_file, x_locations, y_locations)
+
     elif scanpath_model == 'average':
         # scanpath_file = '../data/scanpath/scanpath_ehtask_video_' + video_no + '_task_' + task + '.npy'
-        scanpath_file = data_dir +'scanpath/scanpath_ehtask_video_' + video_no + '_task_' + task + '.npy'
+        scanpath_file = data_dir +'scanpath/scanpath_ehtask_video_' + video_no + '_task_' + task + '_type_' + scanpath_model + '.npy'
         scanpath = np.load(scanpath_file)
         frame_no = scanpath[:, 0]
         x_dva = scanpath[:, 1]
         y_dva = scanpath[:, 2]
 
-        x_locations, y_locations = data_generator.sample_scanpath(
-            x_fix_locations=x_dva,
-            y_fix_locations=y_dva,
-            num_sample_saccs=1000,
-            dva_threshold=0.01,
-            fixation_durations=None,
-            saccade_durations=None,
-        )
-
-        print('x_locations.shape: ', x_locations.shape)
-        print('y_locations.shape: ', y_locations.shape)
-
-    elif scanpath_model == 'stat_model':
-        stat_model = stat_scanpath_model.satisticalScanPath()
-        # collect texts
-        # TODO change to image data
-        image_data_dir = 'data/GazeBase/ocr_detection/images/'
-        text_data_csvs = []
-        file_list = os.listdir(image_data_dir)
-        text_lists = []
-        for ii in range(len(file_list)):
-            if file_list[ii].endswith('.csv'):
-                ocr_data = pd.read_csv(image_data_dir + file_list[ii])
-                confs = np.array(ocr_data['conf'])
-                lefts = np.array(ocr_data['left'])
-                tops = np.array(ocr_data['top'])
-                widths = np.array(ocr_data['width'])
-                heights = np.array(ocr_data['height'])
-                words = np.array(ocr_data['text'])
-
-                text_list = []
-
-                for i in range(len(confs)):
-                    cur_conf = confs[i]
-                    if cur_conf != -1:
-                        text_list.append((words[i],
-                                          lefts[i] + (widths[i] / 2),
-                                          tops[i] + (heights[i] / 2)))
-                text_lists.append(text_list)
-        expt_txts = [expt_txt for _ in range(len(text_lists))]
-        data_dict = data_generator.sample_scanpath_dataset_stat_model(
-            stat_model,
-            text_lists,
-            expt_txts,
-            num_sample_saccs=250,
-            dva_threshold=0.2,
-            max_iter=10,
-            num_scanpaths_per_text=10,
-            num_samples=num_samples,
-            output_size=output_window_size,
-            store_dva_data=False,
-        )
-        syt_data = data_dict['vel_data']
-
-    print('save data')
-    # if window_size != 5000:
-    #     data_save_path = data_dir + 'synthetic_ehtask_data_' + str(scanpath_model) + '_' + str(
-    #         output_window_size) + data_suffix
-    #     np.save(data_save_path, syt_data)
-    # else:
-    #     data_save_path = data_dir + 'synthetic_ehtask_data_'+ str(scanpath_model) + data_suffix
-    #     np.save(data_save_path, syt_data)
-
-    # print('data saved to: ' + str(data_save_path))
-
+        # x_locations, y_locations = data_generator.sample_scanpath(
+        #     x_fix_locations=x_dva,
+        #     y_fix_locations=y_dva,
+        #     num_sample_saccs=1000,
+        #     dva_threshold=0.01,
+        #     fixation_durations=None,
+        #     saccade_durations=None,
+        # )
 
 if __name__ == '__main__':
     # execute only if run as a script

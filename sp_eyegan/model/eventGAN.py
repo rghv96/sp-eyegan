@@ -399,13 +399,20 @@ class dataGenerator():
             return x_locations, y_locations
 
         # set start to first fix location
-        x_location = [x_fix_locations[0]]
-        y_location = [y_fix_locations[0]]
+        # TODO temporary to force add scanpath points in the synthetic data
+        # x_location = [x_fix_locations[0]]
+        # y_location = [y_fix_locations[0]]
+        x_location = []
+        y_location = []
         fixation_x_loc = []
         fixation_y_loc = []
         saccade_x_loc = []
         saccade_y_loc = []
         for i in tqdm(np.arange(len(x_fix_locations)-1),disable = True):
+            # TODO temporary to force add scanpath points in the synthetic data
+            x_location.append(x_fix_locations[i])
+            y_location.append(y_fix_locations[i])
+
             x_target_location = x_fix_locations[i+1]
             y_target_location = y_fix_locations[i+1]
 
